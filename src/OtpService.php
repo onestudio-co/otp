@@ -134,11 +134,11 @@ class OtpService
     {
         $lastSent = Cache::get("otp_last_sent:{$phone}");
         if (!$lastSent) {
-            return 0;
+            return (int) 0;
         }
 
         $resendDelay = (int) Config::get('otp.resend_delay');
         $elapsed = Carbon::now()->diffInSeconds($lastSent);
-        return max(0, $resendDelay - $elapsed);
+        return (int) max(0, $resendDelay - $elapsed);
     }
 }
