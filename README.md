@@ -1,0 +1,330 @@
+# OneStudio OTP Package
+
+A comprehensive Laravel package for sending and verifying One-Time Passwords (OTP) via SMS using multiple providers including Twilio and Unifonic.
+
+## Features
+
+- 🔐 **Multi-Provider Support**: Twilio and Unifonic SMS providers
+- 🛡️ **Security Features**: Rate limiting, attempt tracking, and automatic blocking
+- ⏰ **Configurable Expiry**: Customizable OTP expiration times
+- 🔄 **Resend Protection**: Prevents spam with configurable resend delays
+- 🧪 **Fully Tested**: Comprehensive test suite with 16 tests
+- 🎯 **Laravel Integration**: Service provider, facades, and auto-discovery
+- 📱 **Easy to Use**: Simple API for generating and verifying OTPs
+
+## Installation
+
+### Via Composer
+
+```bash
+composer require one-studio/otp
+```
+
+### Laravel Auto-Discovery
+
+The package will be automatically discovered by Laravel. If you're using Laravel 5.5+, no additional configuration is required.
+
+### Manual Registration (Laravel < 5.5)
+
+Add the service provider to your `config/app.php`:
+
+```php
+'providers' => [
+    // ...
+    OneStudio\Otp\OtpServiceProvider::class,
+],
+```
+
+Add the facade alias:
+
+```php
+'aliases' => [
+    // ...
+    'Otp' => OneStudio\Otp\Facades\Otp::class,
+],
+```
+
+## Configuration
+
+### Publishing Configuration
+
+Publish the configuration file:
+
+```bash
+php artisan vendor:publish --provider="OneStudio\Otp\OtpServiceProvider" --tag="otp-config"
+```
+
+This will create `config/otp.php` in your Laravel application.
+
+### Environment Variables
+
+Add the following environment variables to your `.env` file:
+
+```env
+# OTP Provider (twilio or unifonic)
+OTP_PROVIDER=twilio
+
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_FROM=your_twilio_phone_number
+
+# Unifonic Configuration (if using Unifonic)
+UNIFONIC_APP_SID=your_unifonic_app_sid
+UNIFONIC_SENDER_ID=your_unifonic_sender_id
+
+# OTP Settings
+OTP_LENGTH=4
+OTP_EXPIRY=5
+MAX_ATTEMPTS=3
+RESEND_DELAY=60
+BLOCK_DURATION=30
+```
+
+### Configuration File
+
+The published configuration file (`config/otp.php`) contains:
+
+```php
+return [
+    'default' => env('OTP_PROVIDER', 'twilio'),
+
+    'providers' => [
+        'twilio' => [
+            'driver' => 'twilio',
+            'account_sid' => env('TWILIO_ACCOUNT_SID'),
+            'auth_token' => env('TWILIO_AUTH_TOKEN'),
+            'from' => env('TWILIO_FROM'),
+        ],
+        'unifonic' => [
+            'driver' => 'unifonic',
+            'app_sid' => env('UNIFONIC_APP_SID'),
+            'sender_id' => env('UNIFONIC_SENDER_ID'),
+        ],
+    ],
+
+    'otp_length' => env('OTP_LENGTH', 4),
+    'otp_expiry' => env('OTP_EXPIRY', 5), // minutes
+    'max_attempts' => env('MAX_ATTEMPTS', 3),
+    'resend_delay' => env('RESEND_DELAY', 60), // seconds
+    'block_duration' => env('BLOCK_DURATION', 30), // minutes after max attempts
+];
+```
+
+## Usage
+
+### Using the Facade
+
+```php
+use OneStudio\Otp\Facades\Otp;
+
+// Generate OTP
+$result = Otp::generate('+1234567890');
+
+if ($result['success']) {
+    echo "OTP sent successfully!";
+    echo "Expires in: " . $result['expires_in'] . " seconds";
+} else {
+    echo "Failed to send OTP: " . $result['message'];
+}
+
+// Verify OTP
+$verifyResult = Otp::verify('+1234567890', '1234');
+
+if ($verifyResult['success']) {
+    echo "OTP verified successfully!";
+} else {
+    echo "Verification failed: " . $verifyResult['message'];
+    if (isset($verifyResult['remaining_attempts'])) {
+        echo "Remaining attempts: " . $verifyResult['remaining_attempts'];
+    }
+}
+```
+
+### Using Dependency Injection
+
+```php
+use OneStudio\Otp\OtpService;
+
+class AuthController extends Controller
+{
+    protected $otpService;
+
+    public function __construct(OtpService $otpService)
+    {
+        $this->otpService = $otpService;
+    }
+
+    public function sendOtp(Request $request)
+    {
+        $phone = $request->input('phone');
+        $result = $this->otpService->generate($phone);
+
+        return response()->json($result);
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $phone = $request->input('phone');
+        $code = $request->input('code');
+        
+        $result = $this->otpService->verify($phone, $code);
+
+        return response()->json($result);
+    }
+}
+```
+
+### Using the Manager Directly
+
+```php
+use OneStudio\Otp\OtpManager;
+
+$manager = app(OtpManager::class);
+$provider = $manager->driver(); // Gets the default provider
+$result = $provider->send('+1234567890', 'Your OTP is: 1234');
+```
+
+## API Reference
+
+### OtpService Methods
+
+#### `generate(string $phone): array`
+
+Generates and sends an OTP to the specified phone number.
+
+**Parameters:**
+- `$phone` (string): Phone number in international format (e.g., +1234567890)
+
+**Returns:**
+```php
+[
+    'success' => bool,
+    'message' => string,
+    'expires_in' => int, // seconds
+    'remaining_time' => int, // if resend delay active
+    'blocked_until' => Carbon, // if blocked
+]
+```
+
+#### `verify(string $phone, string $code): array`
+
+Verifies an OTP code for the specified phone number.
+
+**Parameters:**
+- `$phone` (string): Phone number in international format
+- `$code` (string): OTP code to verify
+
+**Returns:**
+```php
+[
+    'success' => bool,
+    'message' => string,
+    'remaining_attempts' => int, // if verification failed
+]
+```
+
+## Security Features
+
+### Rate Limiting
+- **Resend Delay**: Prevents immediate resending of OTPs (default: 60 seconds)
+- **Max Attempts**: Limits verification attempts (default: 3 attempts)
+- **Block Duration**: Temporary blocking after max attempts exceeded (default: 30 minutes)
+
+### OTP Management
+- **Expiry**: OTPs expire after configured time (default: 5 minutes)
+- **Single Use**: OTPs are automatically removed after successful verification
+- **Cache Storage**: OTPs are stored securely in Laravel's cache system
+
+## Error Handling
+
+The package returns detailed error messages for various scenarios:
+
+```php
+// Rate limiting
+[
+    'success' => false,
+    'message' => 'Please wait 45 seconds before requesting a new OTP.',
+    'remaining_time' => 45
+]
+
+// Blocked phone
+[
+    'success' => false,
+    'message' => 'Too many attempts. Please try again later.',
+    'blocked_until' => Carbon::now()->addMinutes(30)
+]
+
+// Invalid OTP
+[
+    'success' => false,
+    'message' => 'Invalid OTP.',
+    'remaining_attempts' => 2
+]
+
+// Expired OTP
+[
+    'success' => false,
+    'message' => 'OTP expired or not found.'
+]
+```
+
+## Testing
+
+The package includes comprehensive tests. Run them using:
+
+```bash
+# Run all tests
+./vendor/bin/phpunit
+
+# Run specific test suites
+./vendor/bin/phpunit --testsuite=Unit
+./vendor/bin/phpunit --testsuite=Feature
+
+# Run with coverage
+./vendor/bin/phpunit --coverage-html coverage
+```
+
+## Supported Providers
+
+### Twilio
+- **Driver**: `twilio`
+- **Required Config**: `account_sid`, `auth_token`, `from`
+- **Documentation**: [Twilio SMS API](https://www.twilio.com/docs/sms)
+
+### Unifonic
+- **Driver**: `unifonic`
+- **Required Config**: `app_sid`, `sender_id`
+- **Documentation**: [Unifonic SMS API](https://docs.unifonic.com/)
+
+## Requirements
+
+- PHP 8.2+
+- Laravel 10.0+
+- Twilio SDK (for Twilio provider)
+- Guzzle HTTP (for Unifonic provider)
+
+## License
+
+This package is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Support
+
+For support, please open an issue on the GitHub repository or contact the maintainer.
+
+## Changelog
+
+### Version 0.1
+- Initial release
+- Twilio and Unifonic provider support
+- Rate limiting and security features
+- Comprehensive test suite
+- Laravel auto-discovery support
