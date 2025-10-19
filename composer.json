@@ -1,0 +1,44 @@
+{
+    "name": "one-studio/otp",
+    "description": "Multi-provider OTP package for Laravel",
+    "type": "library",
+    "license": "MIT",
+    "version": "0.1",
+    "autoload": {
+        "psr-4": {
+            "OneStudio\\Otp\\": "src/"
+        }
+    },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "OneStudio\\Otp\\OtpServiceProvider"
+      ],
+      "aliases": {
+        "Otp": "OneStudio\\Otp\\Facades\\Otp"
+      }
+    }
+  },
+    "authors": [
+        {
+            "name": "AhmedRefaatA",
+            "email": "refaata788@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": "^8.2",
+        "twilio/sdk": "^8.4",
+        "illuminate/support": "^10.0",
+        "guzzlehttp/guzzle": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "orchestra/testbench": "^8.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "OneStudio\\Otp\\Tests\\": "tests/"
+        }
+    }
+}
