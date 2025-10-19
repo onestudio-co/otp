@@ -29,7 +29,7 @@
     "require": {
         "php": "^8.2",
         "twilio/sdk": "^8.4",
-        "illuminate/support": "^10.0",
+        "illuminate/support": "^10.0|^11.0|^12.0",
         "guzzlehttp/guzzle": "*"
     },
     "require-dev": {
