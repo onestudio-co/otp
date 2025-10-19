@@ -6,6 +6,7 @@ namespace OneStudio\Otp;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Carbon;
 use OneStudio\Otp\OtpManager;
 
@@ -24,7 +25,7 @@ class OtpService
         if ($this->isBlocked($phone)) {
             return [
                 'success' => false,
-                'message' => 'Too many attempts. Please try again later.',
+                'message' => Lang::get('otp::otp.too_many_attempts'),
                 'blocked_until' => Cache::get("otp_blocked:{$phone}")
             ];
         }
@@ -34,7 +35,7 @@ class OtpService
             $remainingTime = $this->getRemainingResendTime($phone);
             return [
                 'success' => false,
-                'message' => "Please wait {$remainingTime} seconds before requesting a new OTP.",
+                'message' => Lang::get('otp::otp.resend_delay_active', ['seconds' => $remainingTime]),
                 'remaining_time' => $remainingTime
             ];
         }
@@ -53,12 +54,15 @@ class OtpService
         Cache::put("otp_last_sent:{$phone}", Carbon::now(), Carbon::now()->addSeconds((int) Config::get('otp.resend_delay')));
 
         // Send OTP
-        $message = "Your verification code is: {$otp}. Valid for {$expiryMinutes} minutes.";
+        $message = Lang::get('otp::otp.otp_message', [
+            'otp' => $otp,
+            'minutes' => $expiryMinutes
+        ]);
         $sent = $this->manager->driver()->send($phone, $message);
 
         return [
             'success' => $sent,
-            'message' => $sent ? 'OTP sent successfully.' : 'Failed to send OTP.',
+            'message' => $sent ? Lang::get('otp::otp.otp_sent_successfully') : Lang::get('otp::otp.otp_send_failed'),
             'expires_in' => $expiryMinutes * 60
         ];
     }
@@ -70,7 +74,7 @@ class OtpService
         if (!$otpData) {
             return [
                 'success' => false,
-                'message' => 'OTP expired or not found.'
+                'message' => Lang::get('otp::otp.otp_expired_or_not_found')
             ];
         }
 
@@ -80,7 +84,7 @@ class OtpService
             Cache::forget("otp:{$phone}");
             return [
                 'success' => false,
-                'message' => 'Maximum verification attempts exceeded. Please request a new OTP.'
+                'message' => Lang::get('otp::otp.max_attempts_exceeded')
             ];
         }
 
@@ -90,7 +94,7 @@ class OtpService
             Cache::forget("otp_last_sent:{$phone}");
             return [
                 'success' => true,
-                'message' => 'OTP verified successfully.'
+                'message' => Lang::get('otp::otp.otp_verified_successfully')
             ];
         }
 
@@ -102,7 +106,7 @@ class OtpService
 
         return [
             'success' => false,
-            'message' => 'Invalid OTP.',
+            'message' => Lang::get('otp::otp.invalid_otp'),
             'remaining_attempts' => $remainingAttempts
         ];
     }

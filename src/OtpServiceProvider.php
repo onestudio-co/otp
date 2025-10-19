@@ -25,8 +25,17 @@ final class OtpServiceProvider extends ServiceProvider
 
     public function boot()
     {
+        // Publish configuration file
         $this->publishes([
             __DIR__.'/config/otp.php' => $this->app->configPath('otp.php'),
         ], 'otp-config');
+
+        // Publish translation files
+        $this->publishes([
+            __DIR__.'/lang' => $this->app->langPath('vendor/otp'),
+        ], 'otp-translations');
+
+        // Load translations
+        $this->loadTranslationsFrom(__DIR__.'/lang', 'otp');
     }
 }

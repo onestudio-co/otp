@@ -46,7 +46,7 @@ Add the facade alias:
 
 ## Configuration
 
-### Publishing Configuration
+### Publishing Configuration and Translations
 
 Publish the configuration file:
 
@@ -54,7 +54,16 @@ Publish the configuration file:
 php artisan vendor:publish --provider="OneStudio\Otp\OtpServiceProvider" --tag="otp-config"
 ```
 
-This will create `config/otp.php` in your Laravel application.
+Publish the translation files:
+
+```bash
+php artisan vendor:publish --provider="OneStudio\Otp\OtpServiceProvider" --tag="otp-translations"
+```
+
+This will create:
+- `config/otp.php` - Configuration file
+- `lang/vendor/otp/en/otp.php` - English translations
+- `lang/vendor/otp/ar/otp.php` - Arabic translations
 
 ### Environment Variables
 
@@ -112,6 +121,36 @@ return [
 ```
 
 ## Usage
+
+### Multi-Language Support
+
+The package supports multiple languages with built-in English and Arabic translations. You can customize messages by publishing and editing the translation files.
+
+**Available Languages:**
+- English (`en`)
+- Arabic (`ar`)
+
+**Setting Application Locale:**
+
+In your Laravel application, set the locale in `config/app.php`:
+
+```php
+'locale' => 'ar', // For Arabic
+'locale' => 'en', // For English
+```
+
+Or dynamically in your application:
+
+```php
+App::setLocale('ar'); // Switch to Arabic
+App::setLocale('en'); // Switch to English
+```
+
+**Customizing Messages:**
+
+After publishing translations, you can customize the messages in:
+- `lang/vendor/otp/en/otp.php` - English messages
+- `lang/vendor/otp/ar/otp.php` - Arabic messages
 
 ### Using the Facade
 
@@ -238,8 +277,9 @@ Verifies an OTP code for the specified phone number.
 
 ## Error Handling
 
-The package returns detailed error messages for various scenarios:
+The package returns detailed error messages for various scenarios. All messages are translatable and will be returned in the current application locale:
 
+**English Messages:**
 ```php
 // Rate limiting
 [
@@ -266,6 +306,36 @@ The package returns detailed error messages for various scenarios:
 [
     'success' => false,
     'message' => 'OTP expired or not found.'
+]
+```
+
+**Arabic Messages (when locale is set to 'ar'):**
+```php
+// Rate limiting
+[
+    'success' => false,
+    'message' => 'يرجى الانتظار 45 ثانية قبل طلب رمز تحقق جديد.',
+    'remaining_time' => 45
+]
+
+// Blocked phone
+[
+    'success' => false,
+    'message' => 'محاولات كثيرة جداً. يرجى المحاولة مرة أخرى لاحقاً.',
+    'blocked_until' => Carbon::now()->addMinutes(30)
+]
+
+// Invalid OTP
+[
+    'success' => false,
+    'message' => 'رمز التحقق غير صحيح.',
+    'remaining_attempts' => 2
+]
+
+// Expired OTP
+[
+    'success' => false,
+    'message' => 'انتهت صلاحية رمز التحقق أو لم يتم العثور عليه.'
 ]
 ```
 
@@ -328,3 +398,6 @@ For support, please open an issue on the GitHub repository or contact the mainta
 - Rate limiting and security features
 - Comprehensive test suite
 - Laravel auto-discovery support
+- **Multi-language support** (English & Arabic)
+- **Translatable messages** for all responses
+- **Publishable translation files** for customization

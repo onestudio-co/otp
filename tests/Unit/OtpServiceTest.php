@@ -40,6 +40,7 @@ class OtpServiceTest extends TestCase
         $this->assertArrayHasKey('message', $result);
         $this->assertArrayHasKey('expires_in', $result);
         $this->assertTrue($result['success']);
+        $this->assertEquals(__('otp::otp.otp_sent_successfully'), $result['message']);
     }
 
     public function test_can_verify_otp()
@@ -65,6 +66,7 @@ class OtpServiceTest extends TestCase
         $this->assertArrayHasKey('success', $verifyResult);
         $this->assertArrayHasKey('message', $verifyResult);
         $this->assertTrue($verifyResult['success']);
+        $this->assertEquals(__('otp::otp.otp_verified_successfully'), $verifyResult['message']);
     }
 
     public function test_verification_fails_with_wrong_code()
@@ -86,7 +88,7 @@ class OtpServiceTest extends TestCase
         $this->assertArrayHasKey('message', $verifyResult);
         $this->assertArrayHasKey('remaining_attempts', $verifyResult);
         $this->assertFalse($verifyResult['success']);
-        $this->assertEquals('Invalid OTP.', $verifyResult['message']);
+        $this->assertEquals(__('otp::otp.invalid_otp'), $verifyResult['message']);
     }
 
     public function test_verification_fails_after_max_attempts()
@@ -109,7 +111,7 @@ class OtpServiceTest extends TestCase
         // After max attempts, should be blocked
         $verifyResult = $this->otpService->verify('+201120305686', '9999');
         $this->assertFalse($verifyResult['success']);
-        $this->assertEquals('Maximum verification attempts exceeded. Please request a new OTP.', $verifyResult['message']);
+        $this->assertEquals(__('otp::otp.max_attempts_exceeded'), $verifyResult['message']);
     }
 
     public function test_cannot_generate_otp_when_blocked()
@@ -133,8 +135,8 @@ class OtpServiceTest extends TestCase
         $this->assertFalse($generateResult['success']);
         // The message could be either blocked or resend delay message
         $this->assertContains($generateResult['message'], [
-            'Too many attempts. Please try again later.',
-            'Please wait 60 seconds before requesting a new OTP.'
+            __('otp::otp.too_many_attempts'),
+            __('otp::otp.resend_delay_active', ['seconds' => 60])
         ]);
     }
 

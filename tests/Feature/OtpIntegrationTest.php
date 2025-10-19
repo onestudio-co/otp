@@ -39,6 +39,7 @@ class OtpIntegrationTest extends TestCase
         $this->assertArrayHasKey('message', $result);
         $this->assertArrayHasKey('expires_in', $result);
         $this->assertTrue($result['success']);
+        $this->assertEquals(__('otp::otp.otp_sent_successfully'), $result['message']);
     }
 
     public function test_can_verify_otp_using_facade()
@@ -56,6 +57,7 @@ class OtpIntegrationTest extends TestCase
         // Verify OTP
         $verifyResult = Otp::verify('+201120305686', $otpData['code']);
         $this->assertTrue($verifyResult['success']);
+        $this->assertEquals(__('otp::otp.otp_verified_successfully'), $verifyResult['message']);
     }
 
     public function test_full_otp_flow()
@@ -67,7 +69,7 @@ class OtpIntegrationTest extends TestCase
         // Step 1: Generate OTP
         $generateResult = Otp::generate($phone);
         $this->assertTrue($generateResult['success']);
-        $this->assertEquals('OTP sent successfully.', $generateResult['message']);
+        $this->assertEquals(__('otp::otp.otp_sent_successfully'), $generateResult['message']);
 
         // Step 2: Verify OTP
         $otpData = Cache::get("otp:{$phone}");
@@ -77,7 +79,7 @@ class OtpIntegrationTest extends TestCase
 
         $verifyResult = Otp::verify($phone, $otpData['code']);
         $this->assertTrue($verifyResult['success']);
-        $this->assertEquals('OTP verified successfully.', $verifyResult['message']);
+        $this->assertEquals(__('otp::otp.otp_verified_successfully'), $verifyResult['message']);
 
         // Step 3: OTP should be removed after successful verification
         $this->assertNull(Cache::get("otp:{$phone}"));
@@ -96,7 +98,7 @@ class OtpIntegrationTest extends TestCase
         // Try to generate immediately (should fail due to resend delay)
         $result2 = Otp::generate($phone);
         $this->assertFalse($result2['success']);
-        $this->assertStringContainsString('Please wait', $result2['message']);
+        $this->assertStringContainsString(__('otp::otp.resend_delay_active', ['seconds' => 60]), $result2['message']);
         $this->assertArrayHasKey('remaining_time', $result2);
     }
 
@@ -120,7 +122,7 @@ class OtpIntegrationTest extends TestCase
         // Try to verify expired OTP
         $verifyResult = Otp::verify($phone, $otpData['code']);
         $this->assertFalse($verifyResult['success']);
-        $this->assertEquals('OTP expired or not found.', $verifyResult['message']);
+        $this->assertEquals(__('otp::otp.otp_expired_or_not_found'), $verifyResult['message']);
     }
 
     protected function tearDown(): void
