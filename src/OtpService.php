@@ -40,20 +40,35 @@ class OtpService
             ];
         }
 
+        // Check if test mode is enabled or phone is in test numbers
+        $isTestMode = $this->isTestMode($phone);
+        
         // Generate OTP
-        $otp = $this->generateOtpCode();
+        $otp = $isTestMode ? $this->getTestOtp() : $this->generateOtpCode();
         $expiryMinutes = (int) Config::get('otp.otp_expiry');
 
         // Store OTP in cache
         Cache::put("otp:{$phone}", [
             'code' => $otp,
             'attempts' => 0,
+            'is_test' => $isTestMode,
         ], Carbon::now()->addMinutes($expiryMinutes));
 
         // Set resend delay
         Cache::put("otp_last_sent:{$phone}", Carbon::now(), Carbon::now()->addSeconds((int) Config::get('otp.resend_delay')));
 
-        // Send OTP
+        // Send OTP (skip sending in test mode)
+        if ($isTestMode) {
+            return [
+                'success' => true,
+                'message' => Lang::get('otp::otp.otp_sent_successfully'),
+                'expires_in' => $expiryMinutes * 60,
+                'test_mode' => true,
+                'test_otp' => $otp
+            ];
+        }
+
+        // Send actual OTP
         $message = Lang::get('otp::otp.otp_message', [
             'otp' => $otp,
             'minutes' => $expiryMinutes
@@ -144,5 +159,22 @@ class OtpService
         $resendDelay = (int) Config::get('otp.resend_delay');
         $elapsed = Carbon::parse($lastSent)->diffInSeconds(now());
         return (int) max(0, $resendDelay - $elapsed);
+    }
+
+    protected function isTestMode(string $phone): bool
+    {
+        // Check if global test mode is enabled
+        if (Config::get('otp.test_mode', false)) {
+            return true;
+        }
+
+        // Check if phone number is in test numbers list
+        $testNumbers = Config::get('otp.test_numbers', []);
+        return in_array($phone, $testNumbers);
+    }
+
+    protected function getTestOtp(): string
+    {
+        return Config::get('otp.test_otp', '8888');
     }
 }

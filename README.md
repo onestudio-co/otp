@@ -88,6 +88,10 @@ OTP_EXPIRY=5
 MAX_ATTEMPTS=3
 RESEND_DELAY=60
 BLOCK_DURATION=30
+
+# Test Mode Settings
+OTP_TEST_MODE=false
+OTP_TEST_CODE=8888
 ```
 
 ### Configuration File
@@ -117,6 +121,15 @@ return [
     'max_attempts' => env('MAX_ATTEMPTS', 3),
     'resend_delay' => env('RESEND_DELAY', 60), // seconds
     'block_duration' => env('BLOCK_DURATION', 30), // minutes after max attempts
+
+    // Test mode configuration
+    'test_mode' => env('OTP_TEST_MODE', false),
+    'test_otp' => env('OTP_TEST_CODE', '8888'),
+    'test_numbers' => [
+        '+1234567890',
+        '+9876543210',
+        // Add more test numbers as needed
+    ],
 ];
 ```
 
@@ -151,6 +164,53 @@ App::setLocale('en'); // Switch to English
 After publishing translations, you can customize the messages in:
 - `lang/vendor/otp/en/otp.php` - English messages
 - `lang/vendor/otp/ar/otp.php` - Arabic messages
+
+### Test Mode
+
+The package includes a built-in test mode for development and testing purposes. This allows you to test OTP functionality without sending actual SMS messages.
+
+**Enabling Test Mode:**
+
+1. **Global Test Mode** - Enable for all phone numbers:
+```env
+OTP_TEST_MODE=true
+OTP_TEST_CODE=8888
+```
+
+2. **Specific Test Numbers** - Add phone numbers to test list:
+```php
+// In config/otp.php
+'test_numbers' => [
+    '+1234567890',
+    '+9876543210',
+    '+201120305686', // Your test number
+],
+```
+
+**Test Mode Behavior:**
+
+- **No SMS Sent**: When test mode is active, no actual SMS is sent
+- **Fixed OTP**: Uses the configured test OTP code (default: 8888)
+- **Same Verification**: Test OTPs work exactly like real OTPs
+- **Response Indicators**: Test mode responses include `test_mode: true` and `test_otp` fields
+
+**Test Mode Response Example:**
+```php
+[
+    'success' => true,
+    'message' => 'OTP sent successfully.',
+    'expires_in' => 300,
+    'test_mode' => true,
+    'test_otp' => '8888'
+]
+```
+
+**Use Cases:**
+- Development and testing
+- Demo environments
+- CI/CD pipelines
+- Unit testing
+- Avoiding SMS costs during development
 
 ### Using the Facade
 
@@ -189,6 +249,7 @@ class AuthController extends Controller
 {
     protected $otpService;
 
+f
     public function __construct(OtpService $otpService)
     {
         $this->otpService = $otpService;
@@ -201,7 +262,7 @@ class AuthController extends Controller
 
         return response()->json($result);
     }
-
+f
     public function verifyOtp(Request $request)
     {
         $phone = $request->input('phone');
@@ -401,3 +462,6 @@ For support, please open an issue on the GitHub repository or contact the mainta
 - **Multi-language support** (English & Arabic)
 - **Translatable messages** for all responses
 - **Publishable translation files** for customization
+- **Test Mode** for development and testing
+- **Test phone numbers** support
+- **Fixed test OTP** for consistent testing

@@ -15,4 +15,8 @@ return [
 
     // OTP message template
     'otp_message' => 'Your verification code is: :otp. Valid for :minutes minutes.',
+
+    // Test mode messages
+    'test_mode_enabled' => 'Test mode is enabled. OTP not sent via SMS.',
+    'test_otp_generated' => 'Test OTP generated: :otp',
 ];

@@ -24,4 +24,13 @@ return [
     'max_attempts' => env('MAX_ATTEMPTS', 3),
     'resend_delay' => env('RESEND_DELAY', 60), // seconds
     'block_duration' => env('BLOCK_DURATION', 30), // minutes after max attempts
+
+    // Test mode configuration
+    'test_mode' => env('OTP_TEST_MODE', false),
+    'test_otp' => env('OTP_TEST_CODE', '8888'),
+    'test_numbers' => [
+        '+1234567890',
+        '+9876543210',
+        // Add more test numbers as needed
+    ],
 ];
