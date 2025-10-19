@@ -138,7 +138,7 @@ class OtpService
         }
 
         $resendDelay = (int) Config::get('otp.resend_delay');
-        $elapsed = Carbon::now()->diffInSeconds($lastSent);
+        $elapsed = Carbon::parse($lastSent)->diffInSeconds(now());
         return (int) max(0, $resendDelay - $elapsed);
     }
 }
