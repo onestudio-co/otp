@@ -539,6 +539,15 @@ For support, please open an issue on the GitHub repository or contact the mainta
 
 ## Changelog
 
+### Version 0.7.0 (Current)
+- **Rate Limiting**: Implemented configurable rate limiting per phone number with rolling window approach
+- **Rolling Window**: Tracks requests in the last 60 minutes (not fixed hourly blocks) to prevent bypassing limits
+- **Unified Response Format**: Simplified all responses to use consistent structure with `success`, `message`, `remaining_time`, and `type` fields
+- **Response Type Enum**: Added `OtpResponseType` enum for type-safe response handling
+- **Seconds-Based Timing**: All timing fields now use seconds for easier frontend integration
+- **Enhanced Security**: Prevents users from bypassing rate limits by waiting for hour changes
+- **Improved Testing**: Added comprehensive tests for rolling window rate limiting
+
 ### Version 0.1
 - Initial release
 - Twilio and Unifonic provider support
