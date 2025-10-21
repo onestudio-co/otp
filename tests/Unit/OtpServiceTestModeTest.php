@@ -42,8 +42,7 @@ class OtpServiceTestModeTest extends TestCase
         $this->assertIsArray($result);
         $this->assertTrue($result['success']);
         $this->assertEquals(__('otp::otp.otp_sent_successfully'), $result['message']);
-        $this->assertTrue($result['test_mode']);
-        $this->assertEquals('1234', $result['test_otp']);
+        $this->assertEquals('success', $result['type']);
 
         // Verify OTP is stored in cache
         $otpData = Cache::get('otp:+201120305686');
@@ -71,8 +70,7 @@ class OtpServiceTestModeTest extends TestCase
         $this->assertIsArray($result);
         $this->assertTrue($result['success']);
         $this->assertEquals(__('otp::otp.otp_sent_successfully'), $result['message']);
-        $this->assertTrue($result['test_mode']);
-        $this->assertEquals('5678', $result['test_otp']);
+        $this->assertEquals('success', $result['type']);
 
         // Verify OTP is stored in cache
         $otpData = Cache::get('otp:+201120305686');
@@ -99,8 +97,7 @@ class OtpServiceTestModeTest extends TestCase
         $this->assertIsArray($result);
         $this->assertTrue($result['success']);
         $this->assertEquals(__('otp::otp.otp_sent_successfully'), $result['message']);
-        $this->assertArrayNotHasKey('test_mode', $result);
-        $this->assertArrayNotHasKey('test_otp', $result);
+        $this->assertEquals('success', $result['type']);
 
         // Verify OTP is stored in cache
         $otpData = Cache::get('otp:+201120305686');
@@ -125,7 +122,7 @@ class OtpServiceTestModeTest extends TestCase
         // Generate test OTP
         $generateResult = $this->otpService->generate('+201120305686');
         $this->assertTrue($generateResult['success']);
-        $this->assertEquals('9999', $generateResult['test_otp']);
+        $this->assertEquals('success', $generateResult['type']);
 
         // Verify test OTP
         $verifyResult = $this->otpService->verify('+201120305686', '9999');
@@ -173,24 +170,21 @@ class OtpServiceTestModeTest extends TestCase
         // Test first number
         $result1 = $this->otpService->generate('+201120305686');
         $this->assertTrue($result1['success']);
-        $this->assertTrue($result1['test_mode']);
-        $this->assertEquals('5555', $result1['test_otp']);
+        $this->assertEquals('success', $result1['type']);
 
         Cache::flush();
 
         // Test second number
         $result2 = $this->otpService->generate('+1234567890');
         $this->assertTrue($result2['success']);
-        $this->assertTrue($result2['test_mode']);
-        $this->assertEquals('5555', $result2['test_otp']);
+        $this->assertEquals('success', $result2['type']);
 
         Cache::flush();
 
         // Test third number
         $result3 = $this->otpService->generate('+9876543210');
         $this->assertTrue($result3['success']);
-        $this->assertTrue($result3['test_mode']);
-        $this->assertEquals('5555', $result3['test_otp']);
+        $this->assertEquals('success', $result3['type']);
     }
 
     protected function tearDown(): void

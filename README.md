@@ -207,8 +207,8 @@ When rate limits are exceeded, the service returns:
 [
     'success' => false,
     'message' => 'Rate limit exceeded. Maximum 3 requests per hour allowed. Blocked for 60 minutes.',
-    'rate_limited' => true,
-    'retry_after' => 60 // minutes until unblocked
+    'remaining_time' => 3600, // seconds until unblocked
+    'type' => 'rate_limited'
 ]
 ```
 
@@ -218,10 +218,20 @@ When phone is blocked, the service returns:
 [
     'success' => false,
     'message' => 'Phone number is blocked due to rate limiting. Try again in 45 minutes.',
-    'rate_limited' => true,
-    'retry_after' => 45 // minutes remaining
+    'remaining_time' => 2700, // seconds remaining
+    'type' => 'rate_limited'
 ]
 ```
+
+### Response Types
+
+The `type` field indicates the reason for the response:
+
+- `success` - OTP sent successfully
+- `rate_limited` - Rate limit exceeded or phone blocked
+- `blocked` - Phone blocked due to failed attempts
+- `resend_delay` - Resend delay active
+- `send_failed` - Failed to send OTP
 
 ### Disabling Rate Limiting
 
@@ -269,17 +279,15 @@ OTP_BLOCK_DURATION=60
 - **No SMS Sent**: When test mode is active, no actual SMS is sent
 - **Fixed OTP**: Uses the configured test OTP code (default: 8888)
 - **Same Verification**: Test OTPs work exactly like real OTPs
-- **Response Indicators**: Test mode responses include `test_mode: true` and `test_otp` fields
+- **Response Indicators**: Test mode responses use the same format as regular responses
 
 **Test Mode Response Example:**
 ```php
 [
     'success' => true,
     'message' => 'OTP sent successfully.',
-    'expires_in' => 300,
     'remaining_time' => 60,
-    'test_mode' => true,
-    'test_otp' => '8888'
+    'type' => 'success'
 ]
 ```
 

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Carbon;
 use OneStudio\Otp\OtpManager;
+use OneStudio\Otp\Enums\OtpResponseType;
 
 class OtpService
 {
@@ -28,18 +29,21 @@ class OtpService
                 return [
                     'success' => false,
                     'message' => $rateLimitCheck['message'],
-                    'rate_limited' => true,
-                    'retry_after' => $rateLimitCheck['retry_after'] ?? null,
+                    'remaining_time' => $rateLimitCheck['remaining_time'],
+                    'type' => $rateLimitCheck['type']->value
                 ];
             }
         }
 
         // Check if blocked
         if ($this->isBlocked($phone)) {
+            $blockedUntil = Cache::get("otp_blocked:{$phone}");
+            $remainingTime = Carbon::parse($blockedUntil)->diffInSeconds(Carbon::now());
             return [
                 'success' => false,
                 'message' => Lang::get('otp::otp.too_many_attempts'),
-                'blocked_until' => Cache::get("otp_blocked:{$phone}")
+                'remaining_time' => $remainingTime,
+                'type' => OtpResponseType::BLOCKED->value
             ];
         }
         // Check resend delay
@@ -48,7 +52,8 @@ class OtpService
             return [
                 'success' => false,
                 'message' => Lang::get('otp::otp.resend_delay_active', ['seconds' => $remainingTime]),
-                'remaining_time' => $remainingTime
+                'remaining_time' => $remainingTime,
+                'type' => OtpResponseType::RESEND_DELAY->value
             ];
         }
 
@@ -79,10 +84,8 @@ class OtpService
             return [
                 'success' => true,
                 'message' => Lang::get('otp::otp.otp_sent_successfully'),
-                'expires_in' => $expiryMinutes * 60,
                 'remaining_time' => Config::get('otp.resend_delay'),
-                'test_mode' => true,
-                'test_otp' => $otp
+                'type' => OtpResponseType::SUCCESS->value
             ];
         }
 
@@ -101,8 +104,8 @@ class OtpService
         return [
             'success' => $sent,
             'message' => $sent ? Lang::get('otp::otp.otp_sent_successfully') : Lang::get('otp::otp.otp_send_failed'),
-            'expires_in' => $expiryMinutes * 60,
             'remaining_time' => $sent ? Config::get('otp.resend_delay') : null,
+            'type' => $sent ? OtpResponseType::SUCCESS->value : OtpResponseType::SEND_FAILED->value
         ];
     }
 
@@ -210,12 +213,13 @@ class OtpService
         $rateLimitBlockKey = "otp_rate_blocked:{$phone}";
         if (Cache::has($rateLimitBlockKey)) {
             $blockedUntil = Cache::get($rateLimitBlockKey);
-            $remainingMinutes = Carbon::parse($blockedUntil)->diffInMinutes($now);
+            $remainingTime = Carbon::parse($blockedUntil)->diffInSeconds($now);
             
             return [
                 'allowed' => false,
-                'message' => Lang::get('otp::otp.rate_limit_blocked', ['minutes' => $remainingMinutes]),
-                'retry_after' => $remainingMinutes
+                'message' => Lang::get('otp::otp.rate_limit_blocked', ['minutes' => ceil($remainingTime / 60)]),
+                'remaining_time' => $remainingTime,
+                'type' => OtpResponseType::RATE_LIMITED
             ];
         }
         
@@ -232,7 +236,8 @@ class OtpService
             return [
                 'allowed' => false,
                 'message' => Lang::get('otp::otp.rate_limit_exceeded', ['limit' => $maxRequests, 'minutes' => $blockDuration]),
-                'retry_after' => $blockDuration
+                'remaining_time' => $blockDuration * 60, // Convert to seconds
+                'type' => OtpResponseType::RATE_LIMITED
             ];
         }
         

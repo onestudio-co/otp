@@ -51,11 +51,11 @@ class OtpServiceRateLimitTest extends TestCase
         // 4th request should be rate limited and blocked
         $result = $this->otpService->generate($phone);
         $this->assertFalse($result['success']);
-        $this->assertTrue($result['rate_limited']);
+        $this->assertEquals('rate_limited', $result['type']);
         $this->assertStringContainsString('Rate limit exceeded', $result['message']);
         $this->assertStringContainsString('Blocked for', $result['message']);
-        $this->assertArrayHasKey('retry_after', $result);
-        $this->assertEquals(60, $result['retry_after']); // 60 minutes block
+        $this->assertArrayHasKey('remaining_time', $result);
+        $this->assertEquals(3600, $result['remaining_time']); // 60 minutes in seconds
     }
 
     public function test_rate_limit_disabled()
@@ -76,7 +76,7 @@ class OtpServiceRateLimitTest extends TestCase
         for ($i = 0; $i < 5; $i++) {
             $result = $this->otpService->generate($phone);
             $this->assertTrue($result['success']);
-            $this->assertArrayNotHasKey('rate_limited', $result);
+            $this->assertEquals('success', $result['type']);
         }
     }
 
@@ -100,7 +100,7 @@ class OtpServiceRateLimitTest extends TestCase
         // 4th request should be rate limited and blocked
         $result = $this->otpService->generate($phone);
         $this->assertFalse($result['success']);
-        $this->assertTrue($result['rate_limited']);
+        $this->assertEquals('rate_limited', $result['type']);
 
         // Clear the block and old requests (simulate time passing)
         Cache::forget("otp_rate_blocked:{$phone}");
@@ -138,7 +138,7 @@ class OtpServiceRateLimitTest extends TestCase
         // 4th request from phone1 should be rate limited
         $result = $this->otpService->generate($phone1);
         $this->assertFalse($result['success']);
-        $this->assertTrue($result['rate_limited']);
+        $this->assertEquals('rate_limited', $result['type']);
     }
 
     public function test_rolling_window_rate_limit()
@@ -161,7 +161,7 @@ class OtpServiceRateLimitTest extends TestCase
         // 4th request should be rate limited (no driver call)
         $result = $this->otpService->generate($phone);
         $this->assertFalse($result['success']);
-        $this->assertTrue($result['rate_limited']);
+        $this->assertEquals('rate_limited', $result['type']);
 
         // Clear the block
         Cache::forget("otp_rate_blocked:{$phone}");
@@ -170,7 +170,7 @@ class OtpServiceRateLimitTest extends TestCase
         // This should still be rate limited because we're using rolling window
         $result = $this->otpService->generate($phone);
         $this->assertFalse($result['success']);
-        $this->assertTrue($result['rate_limited']);
+        $this->assertEquals('rate_limited', $result['type']);
     }
 
     protected function tearDown(): void
