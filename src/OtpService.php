@@ -29,9 +29,9 @@ class OtpService
                 'blocked_until' => Cache::get("otp_blocked:{$phone}")
             ];
         }
-        $remainingTime = $this->getRemainingResendTime($phone);
         // Check resend delay
         if (!$this->canResend($phone)) {
+            $remainingTime = $this->getRemainingResendTime($phone);
             return [
                 'success' => false,
                 'message' => Lang::get('otp::otp.resend_delay_active', ['seconds' => $remainingTime]),
@@ -62,7 +62,7 @@ class OtpService
                 'success' => true,
                 'message' => Lang::get('otp::otp.otp_sent_successfully'),
                 'expires_in' => $expiryMinutes * 60,
-                'remaining_time' => $remainingTime,
+                'remaining_time' => Config::get('otp.resend_delay'),
                 'test_mode' => true,
                 'test_otp' => $otp
             ];
@@ -79,7 +79,7 @@ class OtpService
             'success' => $sent,
             'message' => $sent ? Lang::get('otp::otp.otp_sent_successfully') : Lang::get('otp::otp.otp_send_failed'),
             'expires_in' => $expiryMinutes * 60,
-            'remaining_time' => $remainingTime,
+            'remaining_time' => $sent ? Config::get('otp.resend_delay') : null,
         ];
     }
 
