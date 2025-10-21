@@ -43,6 +43,14 @@ abstract class TestCase extends OrchestraTestCase
             'max_attempts' => 3,
             'resend_delay' => 60,
             'block_duration' => 30,
+            'rate_limit' => [
+                'enabled' => true, // Disable rate limiting for basic tests
+                'max_requests_per_hour' => 3,
+                'block_duration' => 60,
+            ],
+            'test_mode' => false,
+            'test_otp' => '8888',
+            'test_numbers' => [],
         ]);
     }
 }

@@ -37,7 +37,8 @@ class OtpIntegrationTest extends TestCase
         $this->assertIsArray($result);
         $this->assertArrayHasKey('success', $result);
         $this->assertArrayHasKey('message', $result);
-        $this->assertArrayHasKey('expires_in', $result);
+        $this->assertArrayHasKey('remaining_time', $result);
+        $this->assertArrayHasKey('type', $result);
         $this->assertTrue($result['success']);
         $this->assertEquals(__('otp::otp.otp_sent_successfully'), $result['message']);
     }

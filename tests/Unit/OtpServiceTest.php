@@ -38,9 +38,11 @@ class OtpServiceTest extends TestCase
         $this->assertIsArray($result);
         $this->assertArrayHasKey('success', $result);
         $this->assertArrayHasKey('message', $result);
-        $this->assertArrayHasKey('expires_in', $result);
+        $this->assertArrayHasKey('remaining_time', $result);
+        $this->assertArrayHasKey('type', $result);
         $this->assertTrue($result['success']);
         $this->assertEquals(__('otp::otp.otp_sent_successfully'), $result['message']);
+        $this->assertEquals('success', $result['type']);
     }
 
     public function test_can_verify_otp()

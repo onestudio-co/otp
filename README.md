@@ -130,6 +130,13 @@ return [
         '+9876543210',
         // Add more test numbers as needed
     ],
+
+    // Rate limiting configuration
+    'rate_limit' => [
+        'enabled' => env('OTP_RATE_LIMIT_ENABLED', true),
+        'max_requests_per_hour' => env('OTP_MAX_REQUESTS_PER_HOUR', 3), // per phone number
+        'block_duration' => env('OTP_BLOCK_DURATION', 60), // minutes to block after limit exceeded
+    ],
 ];
 ```
 
@@ -165,7 +172,82 @@ After publishing translations, you can customize the messages in:
 - `lang/vendor/otp/en/otp.php` - English messages
 - `lang/vendor/otp/ar/otp.php` - Arabic messages
 
-### Test Mode
+### Rate Limiting
+
+The package includes built-in rate limiting to prevent abuse and excessive OTP requests. Rate limiting uses a rolling window approach - tracking requests in the last 60 minutes per phone number with automatic blocking.
+
+### Configuration
+
+Rate limiting can be configured in your `.env` file:
+
+```env
+# Enable/disable rate limiting
+OTP_RATE_LIMIT_ENABLED=true
+
+# Maximum requests per phone number per hour
+OTP_MAX_REQUESTS_PER_HOUR=3
+
+# Block duration in minutes after limit exceeded
+OTP_BLOCK_DURATION=60
+```
+
+### How It Works
+
+- **Per Phone Number**: Rate limits are applied individually to each phone number
+- **Rolling Window**: Tracks requests in the last 60 minutes (not fixed hourly blocks)
+- **Automatic Blocking**: When limit is exceeded, phone is blocked for specified duration
+- **Block Duration**: Configurable block time (default: 60 minutes)
+- **Cache-Based**: Uses Laravel's cache system for tracking with automatic cleanup
+
+### Rate Limit Response
+
+When rate limits are exceeded, the service returns:
+
+```php
+[
+    'success' => false,
+    'message' => 'Rate limit exceeded. Maximum 3 requests per hour allowed. Blocked for 60 minutes.',
+    'remaining_time' => 3600, // seconds until unblocked
+    'type' => 'rate_limited'
+]
+```
+
+When phone is blocked, the service returns:
+
+```php
+[
+    'success' => false,
+    'message' => 'Phone number is blocked due to rate limiting. Try again in 45 minutes.',
+    'remaining_time' => 2700, // seconds remaining
+    'type' => 'rate_limited'
+]
+```
+
+### Response Types
+
+The `type` field indicates the reason for the response:
+
+- `success` - OTP sent successfully
+- `rate_limited` - Rate limit exceeded or phone blocked
+- `blocked` - Phone blocked due to failed attempts
+- `resend_delay` - Resend delay active
+- `send_failed` - Failed to send OTP
+
+### Disabling Rate Limiting
+
+To disable rate limiting entirely:
+
+```env
+OTP_RATE_LIMIT_ENABLED=false
+```
+
+### Use Cases
+
+- **Production**: Enable rate limiting to prevent abuse
+- **Development**: Disable rate limiting for easier testing
+- **High Traffic**: Adjust limits based on your application needs
+
+## Test Mode
 
 The package includes a built-in test mode for development and testing purposes. This allows you to test OTP functionality without sending actual SMS messages.
 
@@ -175,6 +257,11 @@ The package includes a built-in test mode for development and testing purposes. 
 ```env
 OTP_TEST_MODE=true
 OTP_TEST_CODE=8888
+
+# Rate limiting configuration
+OTP_RATE_LIMIT_ENABLED=true
+OTP_MAX_REQUESTS_PER_HOUR=3
+OTP_BLOCK_DURATION=60
 ```
 
 2. **Specific Test Numbers** - Add phone numbers to test list:
@@ -192,17 +279,15 @@ OTP_TEST_CODE=8888
 - **No SMS Sent**: When test mode is active, no actual SMS is sent
 - **Fixed OTP**: Uses the configured test OTP code (default: 8888)
 - **Same Verification**: Test OTPs work exactly like real OTPs
-- **Response Indicators**: Test mode responses include `test_mode: true` and `test_otp` fields
+- **Response Indicators**: Test mode responses use the same format as regular responses
 
 **Test Mode Response Example:**
 ```php
 [
     'success' => true,
     'message' => 'OTP sent successfully.',
-    'expires_in' => 300,
     'remaining_time' => 60,
-    'test_mode' => true,
-    'test_otp' => '8888'
+    'type' => 'success'
 ]
 ```
 
@@ -457,8 +542,10 @@ For support, please open an issue on the GitHub repository or contact the mainta
 ### Version 0.1
 - Initial release
 - Twilio and Unifonic provider support
-- Rate limiting and security features
-- Comprehensive test suite
+- **Rate limiting per phone number** (hourly and daily limits)
+- **Configurable rate limits** via environment variables
+- **Rate limit responses** with retry information
+- Comprehensive test suite (26 tests)
 - Laravel auto-discovery support
 - **Multi-language support** (English & Arabic)
 - **Translatable messages** for all responses
