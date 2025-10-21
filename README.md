@@ -200,6 +200,7 @@ OTP_TEST_CODE=8888
     'success' => true,
     'message' => 'OTP sent successfully.',
     'expires_in' => 300,
+    'remaining_time' => 60,
     'test_mode' => true,
     'test_otp' => '8888'
 ]
