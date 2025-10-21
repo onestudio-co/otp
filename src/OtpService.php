@@ -213,7 +213,7 @@ class OtpService
         $rateLimitBlockKey = "otp_rate_blocked:{$phone}";
         if (Cache::has($rateLimitBlockKey)) {
             $blockedUntil = Cache::get($rateLimitBlockKey);
-            $remainingTime = Carbon::parse($blockedUntil)->diffInSeconds($now);
+            $remainingTime = (int) now()->diffInSeconds(Carbon::parse($blockedUntil));
             
             return [
                 'allowed' => false,
