@@ -21,6 +21,19 @@ class OtpService
 
     public function generate(string $phone): array
     {
+        // Check if rate limiting is enabled
+        if (Config::get('otp.rate_limit.enabled', true)) {
+            $rateLimitCheck = $this->checkRateLimit($phone);
+            if (!$rateLimitCheck['allowed']) {
+                return [
+                    'success' => false,
+                    'message' => $rateLimitCheck['message'],
+                    'rate_limited' => true,
+                    'retry_after' => $rateLimitCheck['retry_after'] ?? null,
+                ];
+            }
+        }
+
         // Check if blocked
         if ($this->isBlocked($phone)) {
             return [
@@ -58,6 +71,11 @@ class OtpService
 
         // Send OTP (skip sending in test mode)
         if ($isTestMode) {
+            // Record the request for rate limiting even in test mode
+            if (Config::get('otp.rate_limit.enabled', true)) {
+                $this->recordRequest($phone);
+            }
+            
             return [
                 'success' => true,
                 'message' => Lang::get('otp::otp.otp_sent_successfully'),
@@ -74,6 +92,11 @@ class OtpService
             'minutes' => $expiryMinutes
         ]);
         $sent = $this->manager->driver()->send($phone, $message);
+
+        // Record the request for rate limiting
+        if (Config::get('otp.rate_limit.enabled', true)) {
+            $this->recordRequest($phone);
+        }
 
         return [
             'success' => $sent,
@@ -177,5 +200,80 @@ class OtpService
     protected function getTestOtp(): string
     {
         return Config::get('otp.test_otp', '8888');
+    }
+
+    protected function checkRateLimit(string $phone): array
+    {
+        $now = Carbon::now();
+        
+        // Check if phone is already blocked due to rate limiting
+        $rateLimitBlockKey = "otp_rate_blocked:{$phone}";
+        if (Cache::has($rateLimitBlockKey)) {
+            $blockedUntil = Cache::get($rateLimitBlockKey);
+            $remainingMinutes = Carbon::parse($blockedUntil)->diffInMinutes($now);
+            
+            return [
+                'allowed' => false,
+                'message' => Lang::get('otp::otp.rate_limit_blocked', ['minutes' => $remainingMinutes]),
+                'retry_after' => $remainingMinutes
+            ];
+        }
+        
+        // Check requests in the last hour using a rolling window
+        $requests = $this->getRequestsInLastHour($phone);
+        $maxRequests = Config::get('otp.rate_limit.max_requests_per_hour', 3);
+        
+        if (count($requests) >= $maxRequests) {
+            // Block the phone for the configured duration
+            $blockDuration = Config::get('otp.rate_limit.block_duration', 60);
+            $blockedUntil = $now->addMinutes($blockDuration);
+            Cache::put($rateLimitBlockKey, $blockedUntil, $blockedUntil);
+            
+            return [
+                'allowed' => false,
+                'message' => Lang::get('otp::otp.rate_limit_exceeded', ['limit' => $maxRequests, 'minutes' => $blockDuration]),
+                'retry_after' => $blockDuration
+            ];
+        }
+        
+        return ['allowed' => true];
+    }
+
+    protected function getRequestsInLastHour(string $phone): array
+    {
+        $now = Carbon::now();
+        $oneHourAgo = $now->copy()->subHour();
+        
+        // Get all request timestamps for this phone
+        $requestsKey = "otp_requests:{$phone}";
+        $requests = Cache::get($requestsKey, []);
+        
+        // Filter requests from the last hour
+        $recentRequests = array_filter($requests, function($timestamp) use ($oneHourAgo) {
+            return Carbon::parse($timestamp)->gte($oneHourAgo);
+        });
+        
+        return $recentRequests;
+    }
+
+    protected function recordRequest(string $phone): void
+    {
+        $now = Carbon::now();
+        
+        // Get existing requests
+        $requestsKey = "otp_requests:{$phone}";
+        $requests = Cache::get($requestsKey, []);
+        
+        // Add current request timestamp
+        $requests[] = $now->toISOString();
+        
+        // Keep only requests from the last 24 hours (cleanup old data)
+        $oneDayAgo = $now->copy()->subDay();
+        $requests = array_filter($requests, function($timestamp) use ($oneDayAgo) {
+            return Carbon::parse($timestamp)->gte($oneDayAgo);
+        });
+        
+        // Store updated requests (expire after 24 hours)
+        Cache::put($requestsKey, $requests, $now->copy()->addDay());
     }
 }

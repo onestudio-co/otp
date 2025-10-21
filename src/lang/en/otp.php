@@ -19,4 +19,8 @@ return [
     // Test mode messages
     'test_mode_enabled' => 'Test mode is enabled. OTP not sent via SMS.',
     'test_otp_generated' => 'Test OTP generated: :otp',
+
+    // Rate limiting messages
+    'rate_limit_exceeded' => 'Rate limit exceeded. Maximum :limit requests per hour allowed. Blocked for :minutes minutes.',
+    'rate_limit_blocked' => 'Phone number is blocked due to rate limiting. Try again in :minutes minutes.',
 ];

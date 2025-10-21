@@ -25,6 +25,13 @@ return [
     'resend_delay' => env('RESEND_DELAY', 60), // seconds
     'block_duration' => env('BLOCK_DURATION', 30), // minutes after max attempts
 
+    // Rate limiting configuration
+    'rate_limit' => [
+        'enabled' => env('OTP_RATE_LIMIT_ENABLED', true),
+        'max_requests_per_hour' => env('OTP_MAX_REQUESTS_PER_HOUR', 3), // per phone number
+        'block_duration' => env('OTP_BLOCK_DURATION', 60), // minutes to block after limit exceeded
+    ],
+
     // Test mode configuration
     'test_mode' => env('OTP_TEST_MODE', false),
     'test_otp' => env('OTP_TEST_CODE', '8888'),
