@@ -115,7 +115,7 @@ class OtpService
         $isBlocked = $this->isBlocked($phone);
 
         // Check attempts
-        if ($otpData['attempts'] >= (int) Config::get('otp.max_attempts') || $isBlocked) {
+        if (isset($otpData['attempts']) && $otpData['attempts'] >= (int) Config::get('otp.max_attempts') || $isBlocked) {
             if (!$isBlocked) {
                 $this->blockPhone($phone);
                 Cache::forget("otp:{$phone}");
