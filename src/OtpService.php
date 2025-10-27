@@ -112,18 +112,14 @@ class OtpService
     public function verify(string $phone, string $code): array
     {
         $otpData = Cache::get("otp:{$phone}");
-
-        if (!$otpData) {
-            return [
-                'success' => false,
-                'message' => Lang::get('otp::otp.otp_expired_or_not_found')
-            ];
-        }
+        $isBlocked = $this->isBlocked($phone);
 
         // Check attempts
-        if ($otpData['attempts'] >= (int) Config::get('otp.max_attempts')) {
-            $this->blockPhone($phone);
-            Cache::forget("otp:{$phone}");
+        if ($otpData['attempts'] >= (int) Config::get('otp.max_attempts') || $isBlocked) {
+            if (!$isBlocked) {
+                $this->blockPhone($phone);
+                Cache::forget("otp:{$phone}");
+            }
             $blockedUntil = Cache::get("otp_blocked:{$phone}");
             $remainingTime = (int) Carbon::now()->diffInSeconds(Carbon::parse($blockedUntil));
             return [
@@ -131,6 +127,13 @@ class OtpService
                 'message' => Lang::get('otp::otp.max_attempts_exceeded', ['minutes' => ceil($remainingTime / 60)]),
                 'remaining_time' => $remainingTime,
                 'type' => OtpResponseType::BLOCKED->value
+            ];
+        }
+
+        if (!$otpData) {
+            return [
+                'success' => false,
+                'message' => Lang::get('otp::otp.otp_expired_or_not_found')
             ];
         }
 
