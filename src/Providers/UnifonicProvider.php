@@ -20,7 +20,7 @@ class UnifonicProvider implements OtpProviderInterface
         $this->senderId = $config['sender_id'];
     }
 
-    public function send(string $phone, string $message): bool
+    public function send(string $phone, string $otp, ?string $message): bool
     {
         try {
             $response = $this->client->post('https://api.unifonic.com/rest/SMS/messages', [

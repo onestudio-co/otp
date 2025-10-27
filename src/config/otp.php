@@ -10,6 +10,8 @@ return [
             'driver' => 'twilio',
             'account_sid' => env('TWILIO_ACCOUNT_SID'),
             'auth_token' => env('TWILIO_AUTH_TOKEN'),
+            'service_type' => env('TWILIO_SERVICE_TYPE', 'sms'),
+            'verification_sid' => env('TWILIO_VERIFICATION_SID'),
             'from' => env('TWILIO_FROM'),
         ],
         'unifonic' => [

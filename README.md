@@ -4,7 +4,8 @@ A comprehensive Laravel package for sending and verifying One-Time Passwords (OT
 
 ## Features
 
-- 🔐 **Multi-Provider Support**: Twilio and Unifonic SMS providers
+- 🔐 **Multi-Provider Support**: Twilio (SMS & Verify API) and Unifonic providers
+- ✨ **Twilio Verify Service**: Full support for Twilio's Verify API with custom OTP codes
 - 🛡️ **Security Features**: Rate limiting, attempt tracking, and automatic blocking
 - ⏰ **Configurable Expiry**: Customizable OTP expiration times
 - 🔄 **Resend Protection**: Prevents spam with configurable resend delays
@@ -76,7 +77,15 @@ OTP_PROVIDER=twilio
 # Twilio Configuration
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
+
+# Twilio Service Type: 'sms' for direct SMS or 'verify' for Twilio Verify API
+TWILIO_SERVICE_TYPE=sms
+
+# Required for SMS service type
 TWILIO_FROM=your_twilio_phone_number
+
+# Required for Verify service type
+TWILIO_VERIFICATION_SID=your_twilio_verification_sid
 
 # Unifonic Configuration (if using Unifonic)
 UNIFONIC_APP_SID=your_unifonic_app_sid
@@ -107,7 +116,9 @@ return [
             'driver' => 'twilio',
             'account_sid' => env('TWILIO_ACCOUNT_SID'),
             'auth_token' => env('TWILIO_AUTH_TOKEN'),
-            'from' => env('TWILIO_FROM'),
+            'service_type' => env('TWILIO_SERVICE_TYPE', 'sms'), // 'sms' or 'verify'
+            'verification_sid' => env('TWILIO_VERIFICATION_SID'), // Required for 'verify' service
+            'from' => env('TWILIO_FROM'), // Required for 'sms' service
         ],
         'unifonic' => [
             'driver' => 'unifonic',
@@ -371,6 +382,64 @@ $provider = $manager->driver(); // Gets the default provider
 $result = $provider->send('+1234567890', 'Your OTP is: 1234');
 ```
 
+### Twilio Verify Service Usage
+
+When using Twilio Verify service, the package handles OTP generation and verification seamlessly:
+
+#### Sending OTP with Verify Service
+
+```php
+use OneStudio\Otp\Facades\Otp;
+
+// Configure .env for Verify service
+// TWILIO_SERVICE_TYPE=verify
+// TWILIO_VERIFICATION_SID=VAxxxxxxxxxxxxx
+
+// Generate and send OTP using Verify API
+$result = Otp::generate('+1234567890');
+
+if ($result['success']) {
+    // OTP sent via Twilio Verify with custom code
+    echo "Verification code sent!";
+    echo "User will receive SMS from Twilio Verify service";
+} else {
+    echo "Error: " . $result['message'];
+}
+```
+
+#### Verifying OTP with Verify Service
+
+```php
+// The package handles verification automatically
+$verifyResult = Otp::verify('+1234567890', '1234');
+
+if ($verifyResult['success']) {
+    // OTP verified successfully
+    // User can proceed with registration/login
+    echo "Phone number verified!";
+} else {
+    echo "Invalid code: " . $verifyResult['message'];
+}
+```
+
+#### Switching Between SMS and Verify
+
+You can easily switch between service types without changing your application code:
+
+**For SMS Service:**
+```env
+TWILIO_SERVICE_TYPE=sms
+TWILIO_FROM=+1234567890
+```
+
+**For Verify Service:**
+```env
+TWILIO_SERVICE_TYPE=verify
+TWILIO_VERIFICATION_SID=VAxxxxxxxxxxxxx
+```
+
+Your application code remains the same regardless of which service you use!
+
 ## API Reference
 
 ### OtpService Methods
@@ -505,9 +574,72 @@ The package includes comprehensive tests. Run them using:
 ## Supported Providers
 
 ### Twilio
-- **Driver**: `twilio`
+
+The package supports two Twilio service types:
+
+#### 1. SMS Service (Direct Messaging)
+- **Service Type**: `sms`
+- **Best For**: Simple OTP delivery with custom message formatting
 - **Required Config**: `account_sid`, `auth_token`, `from`
-- **Documentation**: [Twilio SMS API](https://www.twilio.com/docs/sms)
+- **Features**:
+  - Full control over message content
+  - Custom message templates with multilingual support
+  - Direct SMS delivery
+  - Lower cost per message
+
+**Configuration Example:**
+```env
+TWILIO_SERVICE_TYPE=sms
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_FROM=+1234567890
+```
+
+#### 2. Verify API Service (Recommended)
+- **Service Type**: `verify`
+- **Best For**: Enhanced security and compliance features
+- **Required Config**: `account_sid`, `auth_token`, `verification_sid`
+- **Features**:
+  - Built-in fraud detection
+  - Automatic rate limiting and abuse prevention
+  - Carrier-level integrations for better delivery
+  - Custom OTP code support
+  - Geographic and carrier analytics
+  - Compliance with regulatory requirements
+
+**Configuration Example:**
+```env
+TWILIO_SERVICE_TYPE=verify
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_VERIFICATION_SID=your_verification_sid
+```
+
+**Getting Your Verification SID:**
+1. Log in to your [Twilio Console](https://console.twilio.com/)
+2. Navigate to **Verify** → **Services**
+3. Create a new Verify Service or select an existing one
+4. Copy the **Service SID** (starts with VA...)
+
+**Key Differences:**
+
+| Feature | SMS Service | Verify Service |
+|---------|-------------|----------------|
+| Message Control | Full customization | Template-based |
+| Fraud Detection | Manual | Built-in |
+| Delivery Optimization | Standard | Carrier-optimized |
+| Analytics | Basic | Advanced |
+| Compliance | Manual | Automatic |
+| Setup Complexity | Simple | Moderate |
+| Cost | Lower | Higher |
+
+**Choosing the Right Service:**
+- Use **SMS** for: Simple applications, full message control, budget-conscious projects
+- Use **Verify** for: Production applications, enhanced security, compliance requirements
+
+**Documentation**: 
+- [Twilio SMS API](https://www.twilio.com/docs/sms)
+- [Twilio Verify API](https://www.twilio.com/docs/verify/api)
 
 ### Unifonic
 - **Driver**: `unifonic`
@@ -539,7 +671,15 @@ For support, please open an issue on the GitHub repository or contact the mainta
 
 ## Changelog
 
-### Version 0.7.0 (Current)
+### Version 0.8.0 (Current)
+- **Twilio Verify Service**: Added full support for Twilio Verify API alongside traditional SMS service
+- **Dual Service Types**: Choose between 'sms' (direct messaging) or 'verify' (Twilio Verify API)
+- **Custom OTP with Verify**: Support for custom OTP codes in Twilio Verify service
+- **Service-Specific Configuration**: Automatic configuration validation based on selected service type
+- **Enhanced Documentation**: Comprehensive guide for choosing and configuring Twilio services
+- **Improved Code Structure**: Refactored provider with constants and better separation of concerns
+
+### Version 0.7.0
 - **Rate Limiting**: Implemented configurable rate limiting per phone number with rolling window approach
 - **Rolling Window**: Tracks requests in the last 60 minutes (not fixed hourly blocks) to prevent bypassing limits
 - **Unified Response Format**: Simplified all responses to use consistent structure with `success`, `message`, `remaining_time`, and `type` fields

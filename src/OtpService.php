@@ -94,7 +94,7 @@ class OtpService
             'otp' => $otp,
             'minutes' => $expiryMinutes
         ]);
-        $sent = $this->manager->driver()->send($phone, $message);
+        $sent = $this->manager->driver()->send($phone, $otp, $message);
 
         // Record the request for rate limiting
         if (Config::get('otp.rate_limit.enabled', true)) {
