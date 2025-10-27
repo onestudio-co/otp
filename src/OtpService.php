@@ -38,7 +38,7 @@ class OtpService
         // Check if blocked
         if ($this->isBlocked($phone)) {
             $blockedUntil = Cache::get("otp_blocked:{$phone}");
-            $remainingTime = Carbon::parse($blockedUntil)->diffInSeconds(Carbon::now());
+            $remainingTime = (int) Carbon::now()->diffInSeconds(Carbon::parse($blockedUntil));
             return [
                 'success' => false,
                 'message' => Lang::get('otp::otp.too_many_attempts'),
@@ -124,9 +124,13 @@ class OtpService
         if ($otpData['attempts'] >= (int) Config::get('otp.max_attempts')) {
             $this->blockPhone($phone);
             Cache::forget("otp:{$phone}");
+            $blockedUntil = Cache::get("otp_blocked:{$phone}");
+            $remainingTime = (int) Carbon::now()->diffInSeconds(Carbon::parse($blockedUntil));
             return [
                 'success' => false,
-                'message' => Lang::get('otp::otp.max_attempts_exceeded')
+                'message' => Lang::get('otp::otp.max_attempts_exceeded', ['minutes' => ceil($remainingTime / 60)]),
+                'remaining_time' => $remainingTime,
+                'type' => OtpResponseType::BLOCKED->value
             ];
         }
 

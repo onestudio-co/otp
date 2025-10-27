@@ -9,7 +9,7 @@ return [
     'otp_send_failed' => 'Failed to send OTP.',
     'otp_expired_or_not_found' => 'OTP expired or not found.',
     'invalid_otp' => 'Invalid OTP.',
-    'max_attempts_exceeded' => 'Maximum verification attempts exceeded. Please request a new OTP.',
+    'max_attempts_exceeded' => 'Maximum verification attempts exceeded. You are blocked for :minutes minutes.',
     'too_many_attempts' => 'Too many attempts. Please try again later.',
     'resend_delay_active' => 'Please wait :seconds seconds before requesting a new OTP.',
 
