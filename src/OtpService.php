@@ -101,6 +101,11 @@ class OtpService
             $this->recordRequest($phone);
         }
 
+        if(!$sent){
+            Cache::forget("otp:{$phone}");
+            Cache::forget("otp_last_sent:{$phone}");
+        }
+
         return [
             'success' => $sent,
             'message' => $sent ? Lang::get('otp::otp.otp_sent_successfully') : Lang::get('otp::otp.otp_send_failed'),
