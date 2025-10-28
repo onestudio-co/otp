@@ -22,6 +22,18 @@ class OtpService
 
     public function generate(string $phone): array
     {
+        // Check if blocked
+        if ($this->isBlocked($phone)) {
+            $blockedUntil = Cache::get("otp_blocked:{$phone}");
+            $remainingTime = (int) Carbon::now()->diffInSeconds(Carbon::parse($blockedUntil));
+            return [
+                'success' => false,
+                'message' => Lang::get('otp::otp.too_many_attempts'),
+                'remaining_time' => $remainingTime,
+                'type' => OtpResponseType::BLOCKED->value
+            ];
+        }
+        
         // Check if rate limiting is enabled
         if (Config::get('otp.rate_limit.enabled', true)) {
             $rateLimitCheck = $this->checkRateLimit($phone);
@@ -35,17 +47,6 @@ class OtpService
             }
         }
 
-        // Check if blocked
-        if ($this->isBlocked($phone)) {
-            $blockedUntil = Cache::get("otp_blocked:{$phone}");
-            $remainingTime = (int) Carbon::now()->diffInSeconds(Carbon::parse($blockedUntil));
-            return [
-                'success' => false,
-                'message' => Lang::get('otp::otp.too_many_attempts'),
-                'remaining_time' => $remainingTime,
-                'type' => OtpResponseType::BLOCKED->value
-            ];
-        }
         // Check resend delay
         if (!$this->canResend($phone)) {
             $remainingTime = $this->getRemainingResendTime($phone);
